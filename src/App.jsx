@@ -472,6 +472,7 @@ export default function App() {
       updated_by_name: profile?.name,
     }).eq('id', item.id)
     await logActivity('updated', item.name)
+    await fetchPrepItems()
     setUpdateModal(null)
   }
 
@@ -482,12 +483,14 @@ export default function App() {
       shelf_life_days: parseInt(formShelfLife),
     }).eq('id', editModal.id)
     await logActivity('edited', formName.trim())
+    await fetchPrepItems()
     setEditModal(null)
   }
 
   const handleDelete = async () => {
     await supabase.from('prep_items').delete().eq('id', deleteModal.id)
     await logActivity('deleted', deleteModal.name)
+    await fetchPrepItems()
     setDeleteModal(null)
   }
 
@@ -605,7 +608,7 @@ export default function App() {
               background: 'none', border: 'none', cursor: 'pointer', padding: 4,
             }}>
               <div style={{
-                width: 28, height: 28, borderRadius: '50%',
+                width: 20, height: 20, borderRadius: '50%',
                 background: 'linear-gradient(90deg, #1a1a1a 50%, #f2f2f7 50%)',
                 border: '1.5px solid #aaa',
               }} />
