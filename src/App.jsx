@@ -179,19 +179,32 @@ const PrepRow = ({ item, role, dark, onUpdateDate, onEdit, onDelete }) => {
 
 const LoginScreen = ({ dark }) => {
   const t = T(dark)
-  const [email, setEmail]       = useState('')
-  const [password, setPassword] = useState('')
-  const [name, setName]         = useState('')
-  const [isSignUp, setIsSignUp] = useState(false)
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
-  const [message, setMessage]   = useState('')
+  const [email, setEmail]         = useState('')
+  const [password, setPassword]   = useState('')
+  const [name, setName]           = useState('')
+  const [isSignUp, setIsSignUp]   = useState(false)
+  const [isForgot, setIsForgot]   = useState(false)
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState('')
+  const [message, setMessage]     = useState('')
+  const [showPass, setShowPass]   = useState(false)
 
   const inp = {
     width: '100%', padding: '12px 14px',
     background: t.input, border: `1px solid ${t.inputBorder}`,
     borderRadius: 10, fontSize: 16, color: t.text,
     marginBottom: 12, boxSizing: 'border-box', outline: 'none',
+  }
+
+  const handleForgot = async () => {
+    if (!email) { setError('Enter your email above'); return }
+    setLoading(true); setError(''); setMessage('')
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://misetag.vercel.app',
+    })
+    if (err) setError(err.message)
+    else setMessage('✅ Check your email for a reset link!')
+    setLoading(false)
   }
 
   const handleAuth = async () => {
@@ -205,10 +218,10 @@ const LoginScreen = ({ dark }) => {
         const { error: profErr } = await supabase.from('profiles').insert({
           id: data.user.id,
           name: name.trim() || email.split('@')[0],
-          role: 'cook',
+          role: 'bartender',
         })
         if (profErr) setError(profErr.message)
-        else setMessage('✅ Account created! Check your email to confirm, then sign in.')
+        else setMessage('✅ Account created! You can sign in now.')
       }
     } else {
       const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
@@ -242,36 +255,87 @@ const LoginScreen = ({ dark }) => {
         width: '100%', maxWidth: 360,
         boxShadow: '0 2px 20px rgba(0,0,0,0.08)',
       }}>
-        {isSignUp && (
-          <input placeholder="Your name" value={name}
-            onChange={e => setName(e.target.value)} style={inp} />
+        {isForgot ? (
+          <>
+            <h3 style={{ color: t.text, fontSize: 18, fontWeight: 600, margin: '0 0 6px' }}>Reset Password</h3>
+            <p style={{ color: t.sub, fontSize: 13, margin: '0 0 16px' }}>We'll send a reset link to your email</p>
+            <input type="email" placeholder="Email" value={email}
+              onChange={e => setEmail(e.target.value)} style={inp} />
+            {error   && <p style={{ color: '#ff3b30', fontSize: 13, marginBottom: 10 }}>{error}</p>}
+            {message && <p style={{ color: '#34c759', fontSize: 13, marginBottom: 10 }}>{message}</p>}
+            <button onClick={handleForgot} disabled={loading} style={{
+              width: '100%', padding: 14,
+              background: loading ? '#999' : '#1a1a1a', color: '#fff',
+              border: 'none', borderRadius: 12,
+              fontSize: 16, fontWeight: 600, cursor: loading ? 'default' : 'pointer',
+            }}>
+              {loading ? '...' : 'Send Reset Link'}
+            </button>
+            <p style={{ textAlign: 'center', marginTop: 16, color: t.sub, fontSize: 14 }}>
+              <span onClick={() => { setIsForgot(false); setError(''); setMessage('') }}
+                style={{ color: '#007aff', cursor: 'pointer', fontWeight: 500 }}>
+                Back to Sign In
+              </span>
+            </p>
+          </>
+        ) : (
+          <>
+            {isSignUp && (
+              <input placeholder="Your name" value={name}
+                onChange={e => setName(e.target.value)} style={inp} />
+            )}
+            <input type="email" placeholder="Email" value={email}
+              onChange={e => setEmail(e.target.value)} style={inp} />
+
+            {/* Password field with eye toggle */}
+            <div style={{ position: 'relative', marginBottom: 4 }}>
+              <input
+                type={showPass ? 'text' : 'password'}
+                placeholder="Password" value={password}
+                onChange={e => setPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAuth()}
+                style={{ ...inp, marginBottom: 0, paddingRight: 46 }}
+              />
+              <button onClick={() => setShowPass(!showPass)} style={{
+                position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 18, padding: 4, color: t.sub,
+              }}>
+                {showPass ? '🙈' : '👁️'}
+              </button>
+            </div>
+
+            {!isSignUp && (
+              <p style={{ textAlign: 'right', margin: '6px 0 12px' }}>
+                <span onClick={() => { setIsForgot(true); setError(''); setMessage('') }}
+                  style={{ color: '#007aff', fontSize: 13, cursor: 'pointer' }}>
+                  Forgot password?
+                </span>
+              </p>
+            )}
+
+            {error   && <p style={{ color: '#ff3b30', fontSize: 13, marginBottom: 10 }}>{error}</p>}
+            {message && <p style={{ color: '#34c759', fontSize: 13, marginBottom: 10 }}>{message}</p>}
+
+            <button onClick={handleAuth} disabled={loading} style={{
+              width: '100%', padding: 14,
+              background: loading ? '#999' : '#1a1a1a', color: '#fff',
+              border: 'none', borderRadius: 12,
+              fontSize: 16, fontWeight: 600, cursor: loading ? 'default' : 'pointer',
+              marginBottom: isSignUp ? 0 : 4,
+            }}>
+              {loading ? '...' : isSignUp ? 'Create Account' : 'Sign In'}
+            </button>
+
+            <p style={{ textAlign: 'center', marginTop: 16, color: t.sub, fontSize: 14 }}>
+              {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+              <span onClick={() => { setIsSignUp(!isSignUp); setError(''); setMessage('') }}
+                style={{ color: '#007aff', cursor: 'pointer', fontWeight: 500 }}>
+                {isSignUp ? 'Sign In' : 'Sign Up'}
+              </span>
+            </p>
+          </>
         )}
-        <input type="email" placeholder="Email" value={email}
-          onChange={e => setEmail(e.target.value)} style={inp} />
-        <input type="password" placeholder="Password" value={password}
-          onChange={e => setPassword(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleAuth()}
-          style={{ ...inp, marginBottom: 16 }} />
-
-        {error   && <p style={{ color: '#ff3b30', fontSize: 13, marginBottom: 10 }}>{error}</p>}
-        {message && <p style={{ color: '#34c759', fontSize: 13, marginBottom: 10 }}>{message}</p>}
-
-        <button onClick={handleAuth} disabled={loading} style={{
-          width: '100%', padding: 14,
-          background: loading ? '#999' : '#1a1a1a', color: '#fff',
-          border: 'none', borderRadius: 12,
-          fontSize: 16, fontWeight: 600, cursor: loading ? 'default' : 'pointer',
-        }}>
-          {loading ? '...' : isSignUp ? 'Create Account' : 'Sign In'}
-        </button>
-
-        <p style={{ textAlign: 'center', marginTop: 16, color: t.sub, fontSize: 14 }}>
-          {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
-          <span onClick={() => { setIsSignUp(!isSignUp); setError(''); setMessage('') }}
-            style={{ color: '#007aff', cursor: 'pointer', fontWeight: 500 }}>
-            {isSignUp ? 'Sign In' : 'Sign Up'}
-          </span>
-        </p>
       </div>
     </div>
   )
@@ -403,8 +467,8 @@ export default function App() {
     )
   )
 
-  const canEdit = CAN_EDIT.includes(profile?.role)
-  const isAdmin = profile?.role === 'super_admin'
+  const canEdit  = CAN_EDIT.includes(profile?.role)
+  const canSeeLog = ['super_admin', 'head_chef', 'head_manager'].includes(profile?.role)
 
   // Shared input style
   const inp = (extra = {}) => ({
@@ -470,7 +534,7 @@ export default function App() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            {isAdmin && (
+            {canSeeLog && (
               <button onClick={openActivityLog} style={{
                 background: 'none', border: 'none',
                 cursor: 'pointer', fontSize: 20, padding: 4,
