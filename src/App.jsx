@@ -418,6 +418,7 @@ export default function App() {
   const [formCategory, setFormCategory]   = useState('prepared')
   const [formShelfLife, setFormShelfLife] = useState('4')
   const [formSection, setFormSection]     = useState('dinner')
+  const [daysAgo, setDaysAgo]             = useState('0')
 
   const t = T(dark)
 
@@ -467,13 +468,16 @@ export default function App() {
 
   // ── CRUD handlers
   const handleUpdateDate = async (item) => {
+    const d = new Date()
+    d.setDate(d.getDate() - parseInt(daysAgo || '0'))
     await supabase.from('prep_items').update({
-      prepared_at: new Date().toISOString(),
+      prepared_at: d.toISOString(),
       updated_by_name: profile?.name,
     }).eq('id', item.id)
     await logActivity('updated', item.name)
     await fetchPrepItems()
     setUpdateModal(null)
+    setDaysAgo('0')
   }
 
   const handleEdit = async () => {
@@ -737,17 +741,38 @@ export default function App() {
 
       {/* ── UPDATE DATE modal ──────────────────────────────────────────── */}
       {updateModal && (
-        <Modal dark={dark} onClose={() => setUpdateModal(null)}>
+        <Modal dark={dark} onClose={() => { setUpdateModal(null); setDaysAgo('0') }}>
           <h3 style={{ color: t.text, margin: '0 0 6px', fontSize: 18 }}>Update Date</h3>
-          <p style={{ color: t.sub, fontSize: 14, margin: '0 0 18px' }}>{updateModal.name}</p>
-          <div style={{
-            background: t.input, borderRadius: 10,
-            padding: '12px 14px', fontSize: 15, color: t.text, marginBottom: 20,
-          }}>
-            📅 {fmtDate(new Date().toISOString())}
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={() => setUpdateModal(null)} style={{
+          <p style={{ color: t.sub, fontSize: 14, margin: '0 0 16px' }}>{updateModal.name}</p>
+
+          {profile?.role === 'super_admin' ? (
+            <>
+              <p style={{ color: t.sub, fontSize: 13, margin: '0 0 10px' }}>
+                Приготовлено сколько дней назад?
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                <input
+                  type="number" min="0" max="30"
+                  value={daysAgo}
+                  onChange={e => setDaysAgo(e.target.value)}
+                  style={{ ...inp(), width: 80, marginBottom: 0, textAlign: 'center', fontSize: 20, fontWeight: 700 }}
+                />
+                <span style={{ color: t.sub, fontSize: 14 }}>
+                  {daysAgo === '0' || daysAgo === '' ? '= сегодня' : `= ${fmtDate((() => { const d = new Date(); d.setDate(d.getDate() - parseInt(daysAgo||0)); return d.toISOString() })())}`}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div style={{
+              background: t.input, borderRadius: 10,
+              padding: '12px 14px', fontSize: 15, color: t.text, marginBottom: 8,
+            }}>
+              📅 {fmtDate(new Date().toISOString())}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+            <button onClick={() => { setUpdateModal(null); setDaysAgo('0') }} style={{
               flex: 1, padding: 13, background: t.tabBg, border: 'none',
               borderRadius: 12, color: t.text, fontSize: 15, cursor: 'pointer',
             }}>Cancel</button>
