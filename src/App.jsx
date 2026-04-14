@@ -529,6 +529,33 @@ export default function App() {
         </div>
       </div>
 
+      {/* ── Status Summary Cards ───────────────────────────────────────── */}
+      {(() => {
+        const expired  = visible.filter(i => getDaysLeft(i.prepared_at, i.shelf_life_days) <= 0).length
+        const expiring = visible.filter(i => getDaysLeft(i.prepared_at, i.shelf_life_days) === 1).length
+        const fresh    = visible.filter(i => getDaysLeft(i.prepared_at, i.shelf_life_days) >= 2).length
+        const cards = [
+          { label: 'Expired',  count: expired,  color: '#ff3b30', bg: '#ff3b3015' },
+          { label: 'Expiring', count: expiring, color: '#ff9500', bg: '#ff950015' },
+          { label: 'Fresh',    count: fresh,    color: '#34c759', bg: '#34c75915' },
+        ]
+        return (
+          <div style={{ display: 'flex', gap: 10, padding: '14px 14px 4px' }}>
+            {cards.map(({ label, count, color, bg }) => (
+              <div key={label} style={{
+                flex: 1, background: bg,
+                border: `1.5px solid ${color}33`,
+                borderRadius: 14, padding: '12px 8px',
+                textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 26, fontWeight: 700, color, lineHeight: 1 }}>{count}</div>
+                <div style={{ fontSize: 11, fontWeight: 500, color, marginTop: 4, opacity: 0.85 }}>{label}</div>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
+
       {/* ── List ───────────────────────────────────────────────────────── */}
       <div style={{ paddingBottom: 100 }}>
         {visible.length === 0 ? (
