@@ -748,7 +748,7 @@ export default function App() {
           {profile?.role === 'super_admin' ? (
             <>
               <p style={{ color: t.sub, fontSize: 13, margin: '0 0 10px' }}>
-                Приготовлено сколько дней назад?
+                How many days ago was it prepared?
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
                 <input
@@ -758,7 +758,7 @@ export default function App() {
                   style={{ ...inp(), width: 80, marginBottom: 0, textAlign: 'center', fontSize: 20, fontWeight: 700 }}
                 />
                 <span style={{ color: t.sub, fontSize: 14 }}>
-                  {daysAgo === '0' || daysAgo === '' ? '= сегодня' : `= ${fmtDate((() => { const d = new Date(); d.setDate(d.getDate() - parseInt(daysAgo||0)); return d.toISOString() })())}`}
+                  {daysAgo === '0' || daysAgo === '' ? '= today' : `= ${fmtDate((() => { const d = new Date(); d.setDate(d.getDate() - parseInt(daysAgo||0)); return d.toISOString() })())}`}
                 </span>
               </div>
             </>
