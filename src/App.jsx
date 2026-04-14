@@ -674,7 +674,7 @@ export default function App() {
           { label: 'Fresh',    count: fresh,    color: '#34c759', bg: '#34c75915' },
         ]
         return (
-          <div style={{ display: 'flex', gap: 10, padding: '14px 14px 4px' }}>
+          <div style={{ display: 'flex', gap: 10, padding: '12px 14px' }}>
             {cards.map(({ label, count, color, bg }) => (
               <div key={label} style={{
                 flex: 1, background: bg,
