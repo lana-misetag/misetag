@@ -67,18 +67,42 @@ const T = (dark) => ({
 
 const Modal = ({ dark, onClose, children }) => {
   const t = T(dark)
+  const [vp, setVp] = useState({ top: 0, height: window.innerHeight })
+
+  useEffect(() => {
+    const visual = window.visualViewport
+    if (!visual) return
+    const update = () => setVp({ top: visual.offsetTop, height: visual.height })
+    visual.addEventListener('resize', update)
+    visual.addEventListener('scroll', update)
+    update()
+    return () => {
+      visual.removeEventListener('resize', update)
+      visual.removeEventListener('scroll', update)
+    }
+  }, [])
+
   return (
     <div onClick={onClose} style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-      zIndex: 1000, padding: 16,
+      position: 'fixed', inset: 0,
+      background: 'rgba(0,0,0,0.45)', zIndex: 1000,
     }}>
-      <div onClick={e => e.stopPropagation()} style={{
-        background: t.card, borderRadius: 20, padding: 24,
-        width: '100%', maxWidth: 480,
-        boxShadow: '0 -4px 30px rgba(0,0,0,0.2)',
+      <div style={{
+        position: 'absolute',
+        top: vp.top, left: 0, right: 0,
+        height: vp.height,
+        display: 'flex', alignItems: 'center',
+        justifyContent: 'center', padding: 20,
       }}>
-        {children}
+        <div onClick={e => e.stopPropagation()} style={{
+          background: t.card, borderRadius: 20, padding: 24,
+          width: '100%', maxWidth: 480,
+          boxShadow: '0 8px 40px rgba(0,0,0,0.25)',
+          maxHeight: vp.height - 48,
+          overflowY: 'auto',
+        }}>
+          {children}
+        </div>
       </div>
     </div>
   )
@@ -478,6 +502,7 @@ export default function App() {
       updated_by_name: profile?.name,
     })
     await logActivity('added', formName.trim())
+    await fetchPrepItems()
     setAddModal(false)
     setFormName(''); setFormCategory('prepared'); setFormShelfLife('4')
   }
@@ -567,18 +592,15 @@ export default function App() {
             {canSeeLog && (
               <button onClick={openActivityLog} style={{
                 background: 'none', border: 'none',
-                cursor: 'pointer', fontSize: 20, padding: 4,
-              }}>🕐</button>
+                cursor: 'pointer', padding: 4,
+                color: t.sub, display: 'flex', alignItems: 'center',
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+              </button>
             )}
-            <button onClick={() => { setChangePwModal(true); setNewPw(''); setNewPw2(''); setPwMsg(''); setPwErr('') }} style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              padding: 4, color: t.sub, display: 'flex', alignItems: 'center',
-            }} title="Change password">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-            </button>
             <button onClick={() => setDark(!dark)} style={{
               background: 'none', border: 'none', cursor: 'pointer', padding: 4,
             }}>
@@ -589,10 +611,16 @@ export default function App() {
               }} />
             </button>
             <button onClick={() => supabase.auth.signOut()} style={{
-              background: 'none', border: `1px solid ${t.border}`,
-              color: t.sub, borderRadius: 8,
-              padding: '4px 10px', fontSize: 12, cursor: 'pointer',
-            }}>Out</button>
+              background: 'none', border: 'none',
+              cursor: 'pointer', padding: 4,
+              color: t.sub, display: 'flex', alignItems: 'center',
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
           </div>
         </div>
 
