@@ -20,7 +20,8 @@ const sortItems = (items) => {
     const db = getDaysLeft(b.prepared_at, b.shelf_life_days)
     const sa = getStatus(da), sb = getStatus(db)
     if (p[sa] !== p[sb]) return p[sa] - p[sb]
-    return da - db
+    // within same status: most recently updated goes to bottom
+    return new Date(a.prepared_at) - new Date(b.prepared_at)
   })
 }
 
@@ -288,7 +289,7 @@ const LoginScreen = ({ dark }) => {
               onChange={e => setEmail(e.target.value)} style={inp} />
 
             {/* Password field with eye toggle */}
-            <div style={{ position: 'relative', marginBottom: 4 }}>
+            <div style={{ position: 'relative', marginBottom: 0 }}>
               <input
                 type={showPass ? 'text' : 'password'}
                 placeholder="Password" value={password}
@@ -299,20 +300,32 @@ const LoginScreen = ({ dark }) => {
               <button onClick={() => setShowPass(!showPass)} style={{
                 position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
                 background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 18, padding: 4, color: t.sub,
+                padding: 4, color: '#8e8e93', display: 'flex', alignItems: 'center',
               }}>
-                {showPass ? '🙈' : '👁️'}
+                {showPass ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                )}
               </button>
             </div>
 
-            {!isSignUp && (
-              <p style={{ textAlign: 'right', margin: '6px 0 12px' }}>
+            {/* Forgot password link (Sign In only) or spacer (Sign Up) */}
+            <div style={{ height: 36, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+              {!isSignUp && (
                 <span onClick={() => { setIsForgot(true); setError(''); setMessage('') }}
                   style={{ color: '#007aff', fontSize: 13, cursor: 'pointer' }}>
                   Forgot password?
                 </span>
-              </p>
-            )}
+              )}
+            </div>
 
             {error   && <p style={{ color: '#ff3b30', fontSize: 13, marginBottom: 10 }}>{error}</p>}
             {message && <p style={{ color: '#34c759', fontSize: 13, marginBottom: 10 }}>{message}</p>}
@@ -322,7 +335,6 @@ const LoginScreen = ({ dark }) => {
               background: loading ? '#999' : '#1a1a1a', color: '#fff',
               border: 'none', borderRadius: 12,
               fontSize: 16, fontWeight: 600, cursor: loading ? 'default' : 'pointer',
-              marginBottom: isSignUp ? 0 : 4,
             }}>
               {loading ? '...' : isSignUp ? 'Create Account' : 'Sign In'}
             </button>
@@ -355,10 +367,27 @@ export default function App() {
   const [showLog, setShowLog]       = useState(false)
 
   // Modals
-  const [updateModal, setUpdateModal] = useState(null)
-  const [editModal, setEditModal]     = useState(null)
-  const [deleteModal, setDeleteModal] = useState(null)
-  const [addModal, setAddModal]       = useState(false)
+  const [updateModal, setUpdateModal]   = useState(null)
+  const [editModal, setEditModal]       = useState(null)
+  const [deleteModal, setDeleteModal]   = useState(null)
+  const [addModal, setAddModal]         = useState(false)
+  const [changePwModal, setChangePwModal] = useState(false)
+
+  // Change password state
+  const [newPw, setNewPw]       = useState('')
+  const [newPw2, setNewPw2]     = useState('')
+  const [pwMsg, setPwMsg]       = useState('')
+  const [pwErr, setPwErr]       = useState('')
+  const [showNewPw, setShowNewPw] = useState(false)
+
+  const handleChangePassword = async () => {
+    setPwErr(''); setPwMsg('')
+    if (!newPw || newPw.length < 6) { setPwErr('Password must be at least 6 characters'); return }
+    if (newPw !== newPw2) { setPwErr("Passwords don't match"); return }
+    const { error } = await supabase.auth.updateUser({ password: newPw })
+    if (error) setPwErr(error.message)
+    else { setPwMsg('✅ Password changed!'); setNewPw(''); setNewPw2('') }
+  }
 
   // Form state
   const [formName, setFormName]           = useState('')
@@ -445,6 +474,7 @@ export default function App() {
       category: formCategory,
       shelf_life_days: parseInt(formShelfLife),
       menu_section: formSection,
+      prepared_at: new Date().toISOString(),
       updated_by_name: profile?.name,
     })
     await logActivity('added', formName.trim())
@@ -540,6 +570,15 @@ export default function App() {
                 cursor: 'pointer', fontSize: 20, padding: 4,
               }}>🕐</button>
             )}
+            <button onClick={() => { setChangePwModal(true); setNewPw(''); setNewPw2(''); setPwMsg(''); setPwErr('') }} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: 4, color: t.sub, display: 'flex', alignItems: 'center',
+            }} title="Change password">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </button>
             <button onClick={() => setDark(!dark)} style={{
               background: 'none', border: 'none', cursor: 'pointer', padding: 4,
             }}>
@@ -773,6 +812,61 @@ export default function App() {
               flex: 1, padding: 13, background: '#1a1a1a', border: 'none',
               borderRadius: 12, color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer',
             }}>Add</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── CHANGE PASSWORD modal ──────────────────────────────────────── */}
+      {changePwModal && (
+        <Modal dark={dark} onClose={() => setChangePwModal(false)}>
+          <h3 style={{ color: t.text, margin: '0 0 6px', fontSize: 18 }}>Change Password</h3>
+          <p style={{ color: t.sub, fontSize: 13, margin: '0 0 16px' }}>Set a new password for your account</p>
+          <div style={{ position: 'relative', marginBottom: 12 }}>
+            <input
+              type={showNewPw ? 'text' : 'password'}
+              placeholder="New password"
+              value={newPw}
+              onChange={e => setNewPw(e.target.value)}
+              style={{ ...inp(), paddingRight: 46, marginBottom: 0 }}
+            />
+            <button onClick={() => setShowNewPw(!showNewPw)} style={{
+              position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: 4, color: t.sub, display: 'flex', alignItems: 'center',
+            }}>
+              {showNewPw ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              )}
+            </button>
+          </div>
+          <input
+            type="password"
+            placeholder="Confirm new password"
+            value={newPw2}
+            onChange={e => setNewPw2(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleChangePassword()}
+            style={inp()}
+          />
+          {pwErr && <p style={{ color: '#ff3b30', fontSize: 13, marginBottom: 10 }}>{pwErr}</p>}
+          {pwMsg && <p style={{ color: '#34c759', fontSize: 13, marginBottom: 10 }}>{pwMsg}</p>}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={() => setChangePwModal(false)} style={{
+              flex: 1, padding: 13, background: t.tabBg, border: 'none',
+              borderRadius: 12, color: t.text, fontSize: 15, cursor: 'pointer',
+            }}>Cancel</button>
+            <button onClick={handleChangePassword} style={{
+              flex: 1, padding: 13, background: '#1a1a1a', border: 'none',
+              borderRadius: 12, color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer',
+            }}>Save</button>
           </div>
         </Modal>
       )}
