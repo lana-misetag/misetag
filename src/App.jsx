@@ -960,11 +960,9 @@ export default function App() {
                     padding: '8px 10px',
                     boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
                   }}>
-                    {!isMe && (
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#25d366', marginBottom: 2 }}>
-                        {msg.author_name}
-                      </div>
-                    )}
+                    <div style={{ fontSize: 12, fontWeight: 600, color: isMe ? '#1a8a4a' : '#25d366', marginBottom: 2 }}>
+                      {msg.author_name}
+                    </div>
                     <div style={{ fontSize: 14, color: '#1a1a1a', lineHeight: 1.4 }}>{msg.text}</div>
                     <div style={{ fontSize: 11, color: '#888', marginTop: 3, textAlign: 'right' }}>
                       {fmtDate(msg.created_at)}
