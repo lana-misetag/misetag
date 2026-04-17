@@ -14,14 +14,10 @@ const getStatus = (d) => d <= 0 ? 'red' : d === 1 ? 'yellow' : 'green'
 const STATUS_COLOR = { red: '#ff3b30', yellow: '#ff9500', green: '#34c759' }
 
 const sortItems = (items) => {
-  const p = { red: 0, yellow: 1, green: 2 }
   return [...items].sort((a, b) => {
     const da = getDaysLeft(a.prepared_at, a.shelf_life_days)
     const db = getDaysLeft(b.prepared_at, b.shelf_life_days)
-    const sa = getStatus(da), sb = getStatus(db)
-    if (p[sa] !== p[sb]) return p[sa] - p[sb]
-    // within same status: most recently updated goes to bottom
-    return new Date(a.prepared_at) - new Date(b.prepared_at)
+    return da - db
   })
 }
 
@@ -388,7 +384,10 @@ export default function App() {
   const [tab, setTab]               = useState('dinner')
   const [category, setCategory]     = useState('all')
   const [activityLog, setActivityLog] = useState([])
-  const [showLog, setShowLog]       = useState(false)
+  const [showLog, setShowLog]         = useState(false)
+  const [messages, setMessages]       = useState([])
+  const [showMessages, setShowMessages] = useState(false)
+  const [newMessage, setNewMessage]   = useState('')
 
   // Modals
   const [updateModal, setUpdateModal]   = useState(null)
@@ -444,8 +443,10 @@ export default function App() {
   useEffect(() => {
     if (!profile) return
     fetchPrepItems()
+    fetchMessages()
     const channel = supabase.channel('prep-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'prep_items' }, fetchPrepItems)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, fetchMessages)
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [profile])
@@ -512,6 +513,22 @@ export default function App() {
     await fetchPrepItems()
     setAddModal(false)
     setFormName(''); setFormCategory('prepared'); setFormShelfLife('4')
+  }
+
+  const fetchMessages = async () => {
+    const { data } = await supabase.from('messages').select('*')
+      .order('created_at', { ascending: false }).limit(100)
+    if (data) setMessages(data)
+  }
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim()) return
+    await supabase.from('messages').insert({
+      text: newMessage.trim(),
+      author_name: profile?.name,
+    })
+    setNewMessage('')
+    await fetchMessages()
   }
 
   const openActivityLog = async () => {
@@ -596,6 +613,22 @@ export default function App() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button onClick={() => { setShowMessages(true); fetchMessages() }} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: 4, color: t.sub, display: 'flex', alignItems: 'center',
+              position: 'relative',
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              {messages.length > 0 && (
+                <span style={{
+                  position: 'absolute', top: 0, right: 0,
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: '#ff3b30',
+                }} />
+              )}
+            </button>
             {canSeeLog && (
               <button onClick={openActivityLog} style={{
                 background: 'none', border: 'none',
@@ -868,6 +901,44 @@ export default function App() {
               flex: 1, padding: 13, background: '#1a1a1a', border: 'none',
               borderRadius: 12, color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer',
             }}>Add</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── MESSAGES modal ─────────────────────────────────────────────── */}
+      {showMessages && (
+        <Modal dark={dark} onClose={() => setShowMessages(false)}>
+          <h3 style={{ color: t.text, margin: '0 0 16px', fontSize: 18 }}>📋 Notes Board</h3>
+          <div style={{ maxHeight: 300, overflowY: 'auto', marginBottom: 16 }}>
+            {messages.length === 0 ? (
+              <p style={{ color: t.sub, fontSize: 14, textAlign: 'center', padding: '24px 0' }}>
+                No notes yet — be the first!
+              </p>
+            ) : messages.map(msg => (
+              <div key={msg.id} style={{
+                padding: '10px 0',
+                borderBottom: `1px solid ${t.border}`,
+              }}>
+                <div style={{ fontSize: 14, color: t.text }}>{msg.text}</div>
+                <div style={{ fontSize: 12, color: t.sub, marginTop: 4 }}>
+                  {msg.author_name} · {fmtDate(msg.created_at)}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              placeholder="Write a note..."
+              value={newMessage}
+              onChange={e => setNewMessage(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+              style={{ ...inp(), flex: 1, marginBottom: 0 }}
+            />
+            <button onClick={handleSendMessage} style={{
+              padding: '12px 16px', background: '#1a1a1a', border: 'none',
+              borderRadius: 10, color: '#fff', fontSize: 15,
+              fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+            }}>Send</button>
           </div>
         </Modal>
       )}
