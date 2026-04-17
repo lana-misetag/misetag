@@ -919,48 +919,83 @@ export default function App() {
       {/* ── MESSAGES modal ─────────────────────────────────────────────── */}
       {showMessages && (
         <Modal dark={dark} onClose={() => setShowMessages(false)}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <h3 style={{ color: t.text, margin: 0, fontSize: 18 }}>Notes Board</h3>
-            <span style={{ color: t.sub, fontSize: 12 }}>{messages.length} notes</span>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%',
+              background: '#25d366', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: t.text }}>Notes Board</div>
+              <div style={{ fontSize: 12, color: t.sub }}>Kitchen team</div>
+            </div>
           </div>
-          <div style={{ minHeight: 200, maxHeight: 320, overflowY: 'auto', marginBottom: 12 }}>
+
+          {/* Chat area */}
+          <div style={{
+            minHeight: 220, maxHeight: 320, overflowY: 'auto',
+            background: dark ? '#0d1117' : '#e5ddd5',
+            borderRadius: 12, padding: '12px 8px', marginBottom: 10,
+            display: 'flex', flexDirection: 'column', gap: 6,
+          }}>
             {messages.length === 0 ? (
-              <p style={{ color: t.sub, fontSize: 14, textAlign: 'center', padding: '40px 0' }}>
+              <p style={{ color: '#888', fontSize: 13, textAlign: 'center', margin: 'auto' }}>
                 No notes yet — be the first!
               </p>
-            ) : messages.map((msg, i) => (
-              <div key={msg.id} style={{
-                padding: '10px 12px',
-                marginBottom: 8,
-                background: msg.author_name === profile?.name ? '#1a1a1a' : t.input,
-                borderRadius: 12,
-                borderBottomRightRadius: msg.author_name === profile?.name ? 4 : 12,
-                borderBottomLeftRadius: msg.author_name === profile?.name ? 12 : 4,
-                alignSelf: msg.author_name === profile?.name ? 'flex-end' : 'flex-start',
-              }}>
-                <div style={{ fontSize: 14, color: msg.author_name === profile?.name ? '#fff' : t.text, lineHeight: 1.4 }}>
-                  {msg.text}
+            ) : messages.map(msg => {
+              const isMe = msg.author_name === profile?.name
+              return (
+                <div key={msg.id} style={{
+                  display: 'flex',
+                  justifyContent: isMe ? 'flex-end' : 'flex-start',
+                }}>
+                  <div style={{
+                    maxWidth: '78%',
+                    background: isMe ? '#dcf8c6' : '#ffffff',
+                    borderRadius: isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                    padding: '8px 10px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
+                  }}>
+                    {!isMe && (
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#25d366', marginBottom: 2 }}>
+                        {msg.author_name}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 14, color: '#1a1a1a', lineHeight: 1.4 }}>{msg.text}</div>
+                    <div style={{ fontSize: 11, color: '#888', marginTop: 3, textAlign: 'right' }}>
+                      {fmtDate(msg.created_at)}
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize: 11, color: msg.author_name === profile?.name ? 'rgba(255,255,255,0.6)' : t.sub, marginTop: 4 }}>
-                  {msg.author_name} · {fmtDate(msg.created_at)}
-                </div>
-              </div>
-            ))}
+              )
+            })}
             <div ref={messagesEndRef} />
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+
+          {/* Input */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input
               placeholder="Write a note..."
               value={newMessage}
               onChange={e => setNewMessage(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-              style={{ ...inp(), flex: 1, marginBottom: 0 }}
+              style={{ ...inp(), flex: 1, marginBottom: 0, borderRadius: 24 }}
             />
             <button onClick={handleSendMessage} style={{
-              padding: '12px 16px', background: '#1a1a1a', border: 'none',
-              borderRadius: 10, color: '#fff', fontSize: 15,
-              fontWeight: 600, cursor: 'pointer', flexShrink: 0,
-            }}>Send</button>
+              width: 44, height: 44, borderRadius: '50%',
+              background: '#25d366', border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', flexShrink: 0,
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
           </div>
         </Modal>
       )}
