@@ -515,9 +515,11 @@ export default function App() {
     setFormName(''); setFormCategory('prepared'); setFormShelfLife('4')
   }
 
+  const messagesEndRef = useRef(null)
+
   const fetchMessages = async () => {
     const { data } = await supabase.from('messages').select('*')
-      .order('created_at', { ascending: false }).limit(100)
+      .order('created_at', { ascending: true }).limit(100)
     if (data) setMessages(data)
   }
 
@@ -529,7 +531,16 @@ export default function App() {
     })
     setNewMessage('')
     await fetchMessages()
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
   }
+
+  useEffect(() => {
+    if (showMessages) {
+      fetchMessages().then(() => {
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+      })
+    }
+  }, [showMessages])
 
   const openActivityLog = async () => {
     const { data } = await supabase.from('activity_log').select('*')
@@ -908,23 +919,34 @@ export default function App() {
       {/* ── MESSAGES modal ─────────────────────────────────────────────── */}
       {showMessages && (
         <Modal dark={dark} onClose={() => setShowMessages(false)}>
-          <h3 style={{ color: t.text, margin: '0 0 16px', fontSize: 18 }}>📋 Notes Board</h3>
-          <div style={{ maxHeight: 300, overflowY: 'auto', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <h3 style={{ color: t.text, margin: 0, fontSize: 18 }}>Notes Board</h3>
+            <span style={{ color: t.sub, fontSize: 12 }}>{messages.length} notes</span>
+          </div>
+          <div style={{ minHeight: 200, maxHeight: 320, overflowY: 'auto', marginBottom: 12 }}>
             {messages.length === 0 ? (
-              <p style={{ color: t.sub, fontSize: 14, textAlign: 'center', padding: '24px 0' }}>
+              <p style={{ color: t.sub, fontSize: 14, textAlign: 'center', padding: '40px 0' }}>
                 No notes yet — be the first!
               </p>
-            ) : messages.map(msg => (
+            ) : messages.map((msg, i) => (
               <div key={msg.id} style={{
-                padding: '10px 0',
-                borderBottom: `1px solid ${t.border}`,
+                padding: '10px 12px',
+                marginBottom: 8,
+                background: msg.author_name === profile?.name ? '#1a1a1a' : t.input,
+                borderRadius: 12,
+                borderBottomRightRadius: msg.author_name === profile?.name ? 4 : 12,
+                borderBottomLeftRadius: msg.author_name === profile?.name ? 12 : 4,
+                alignSelf: msg.author_name === profile?.name ? 'flex-end' : 'flex-start',
               }}>
-                <div style={{ fontSize: 14, color: t.text }}>{msg.text}</div>
-                <div style={{ fontSize: 12, color: t.sub, marginTop: 4 }}>
+                <div style={{ fontSize: 14, color: msg.author_name === profile?.name ? '#fff' : t.text, lineHeight: 1.4 }}>
+                  {msg.text}
+                </div>
+                <div style={{ fontSize: 11, color: msg.author_name === profile?.name ? 'rgba(255,255,255,0.6)' : t.sub, marginTop: 4 }}>
                   {msg.author_name} · {fmtDate(msg.created_at)}
                 </div>
               </div>
             ))}
+            <div ref={messagesEndRef} />
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
