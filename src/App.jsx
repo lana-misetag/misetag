@@ -975,13 +975,21 @@ export default function App() {
           </div>
 
           {/* Input */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+            <textarea
               placeholder="Write a note..."
               value={newMessage}
               onChange={e => setNewMessage(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-              style={{ ...inp(), flex: 1, marginBottom: 0, borderRadius: 24 }}
+              rows={1}
+              style={{
+                ...inp(), flex: 1, marginBottom: 0, borderRadius: 20,
+                resize: 'none', lineHeight: 1.4, maxHeight: 100,
+                overflow: 'auto', paddingTop: 12, paddingBottom: 12,
+              }}
+              onInput={e => {
+                e.target.style.height = 'auto'
+                e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'
+              }}
             />
             <button onClick={handleSendMessage} style={{
               width: 44, height: 44, borderRadius: '50%',
