@@ -387,8 +387,9 @@ export default function App() {
   const [showLog, setShowLog]         = useState(false)
   const [messages, setMessages]       = useState([])
   const [showMessages, setShowMessages] = useState(false)
-  const [newMessage, setNewMessage]   = useState('')
-  const [deletingMsgId, setDeletingMsgId] = useState(null)
+  const [newMessage, setNewMessage]     = useState('')
+  const [contextMsg, setContextMsg]     = useState(null)
+  const [replyTo, setReplyTo]           = useState(null)
 
   // Modals
   const [updateModal, setUpdateModal]   = useState(null)
@@ -526,8 +527,18 @@ export default function App() {
 
   const handleDeleteMessage = async (id) => {
     await supabase.from('messages').delete().eq('id', id)
-    setDeletingMsgId(null)
+    setContextMsg(null)
     await fetchMessages()
+  }
+
+  const handleSendEmoji = async (emoji) => {
+    await supabase.from('messages').insert({
+      text: emoji,
+      author_name: profile?.name,
+    })
+    setContextMsg(null)
+    await fetchMessages()
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
   }
 
   const handleSendMessage = async () => {
@@ -535,8 +546,11 @@ export default function App() {
     await supabase.from('messages').insert({
       text: newMessage.trim(),
       author_name: profile?.name,
+      reply_to_text: replyTo?.text || null,
+      reply_to_author: replyTo?.author_name || null,
     })
     setNewMessage('')
+    setReplyTo(null)
     await fetchMessages()
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
   }
@@ -955,19 +969,27 @@ export default function App() {
               </p>
             ) : messages.map(msg => {
               const isMe = msg.author_name === profile?.name
-              const isDeleting = deletingMsgId === msg.id
               return (
                 <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
                   <div
-                    onClick={() => isMe && setDeletingMsgId(isDeleting ? null : msg.id)}
+                    onClick={() => setContextMsg(contextMsg?.id === msg.id ? null : msg)}
                     style={{
                       maxWidth: '78%',
                       background: isMe ? '#dcf8c6' : '#ffffff',
                       borderRadius: isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
                       padding: '8px 10px',
                       boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
-                      cursor: isMe ? 'pointer' : 'default',
+                      cursor: 'pointer',
                     }}>
+                    {msg.reply_to_text && (
+                      <div style={{
+                        borderLeft: '3px solid #25d366', paddingLeft: 8,
+                        marginBottom: 6, opacity: 0.75,
+                      }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: '#25d366' }}>{msg.reply_to_author}</div>
+                        <div style={{ fontSize: 12, color: '#555', whiteSpace: 'pre-wrap' }} >{msg.reply_to_text.length > 60 ? msg.reply_to_text.slice(0,60)+'…' : msg.reply_to_text}</div>
+                      </div>
+                    )}
                     <div style={{ fontSize: 12, fontWeight: 600, color: isMe ? '#1a8a4a' : '#25d366', marginBottom: 2 }}>
                       {msg.author_name}
                     </div>
@@ -976,16 +998,44 @@ export default function App() {
                       {fmtDate(msg.created_at)}
                     </div>
                   </div>
-                  {isDeleting && (
-                    <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                      <button onClick={() => setDeletingMsgId(null)} style={{
-                        padding: '4px 12px', borderRadius: 8, border: 'none',
-                        background: '#e5e5ea', color: '#1a1a1a', fontSize: 12, cursor: 'pointer',
-                      }}>Cancel</button>
-                      <button onClick={() => handleDeleteMessage(msg.id)} style={{
-                        padding: '4px 12px', borderRadius: 8, border: 'none',
-                        background: '#ff3b30', color: '#fff', fontSize: 12, cursor: 'pointer',
-                      }}>Delete</button>
+
+                  {/* Context menu */}
+                  {contextMsg?.id === msg.id && (
+                    <div style={{
+                      marginTop: 4, background: '#222', borderRadius: 14,
+                      overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                    }}>
+                      {/* Emoji row */}
+                      <div style={{ display: 'flex', gap: 2, padding: '10px 12px', borderBottom: '1px solid #333' }}>
+                        {['👍','❤️','😂','😮','😢','🙏'].map(e => (
+                          <button key={e} onClick={() => handleSendEmoji(e)} style={{
+                            background: 'none', border: 'none', fontSize: 22,
+                            cursor: 'pointer', padding: '2px 4px', borderRadius: 8,
+                          }}>{e}</button>
+                        ))}
+                      </div>
+                      {/* Reply */}
+                      <button onClick={() => { setReplyTo(msg); setContextMsg(null) }} style={{
+                        width: '100%', padding: '12px 16px',
+                        background: 'none', border: 'none', borderBottom: '1px solid #333',
+                        color: '#fff', fontSize: 15, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+                      }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                        Reply
+                      </button>
+                      {/* Delete — own messages only */}
+                      {isMe && (
+                        <button onClick={() => handleDeleteMessage(msg.id)} style={{
+                          width: '100%', padding: '12px 16px',
+                          background: 'none', border: 'none',
+                          color: '#ff3b30', fontSize: 15, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+                        }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                          Delete
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -993,6 +1043,26 @@ export default function App() {
             })}
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Reply preview */}
+          {replyTo && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: t.input, borderRadius: 10, padding: '8px 12px',
+              marginBottom: 8, borderLeft: '3px solid #25d366',
+            }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#25d366' }}>{replyTo.author_name}</div>
+                <div style={{ fontSize: 12, color: t.sub, whiteSpace: 'pre-wrap' }}>
+                  {replyTo.text.length > 60 ? replyTo.text.slice(0,60)+'…' : replyTo.text}
+                </div>
+              </div>
+              <button onClick={() => setReplyTo(null)} style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: t.sub, fontSize: 18, padding: 2,
+              }}>×</button>
+            </div>
+          )}
 
           {/* Input */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
