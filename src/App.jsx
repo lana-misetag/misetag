@@ -388,6 +388,7 @@ export default function App() {
   const [messages, setMessages]       = useState([])
   const [showMessages, setShowMessages] = useState(false)
   const [newMessage, setNewMessage]   = useState('')
+  const [deletingMsgId, setDeletingMsgId] = useState(null)
 
   // Modals
   const [updateModal, setUpdateModal]   = useState(null)
@@ -521,6 +522,12 @@ export default function App() {
     const { data } = await supabase.from('messages').select('*')
       .order('created_at', { ascending: true }).limit(100)
     if (data) setMessages(data)
+  }
+
+  const handleDeleteMessage = async (id) => {
+    await supabase.from('messages').delete().eq('id', id)
+    setDeletingMsgId(null)
+    await fetchMessages()
   }
 
   const handleSendMessage = async () => {
@@ -948,26 +955,39 @@ export default function App() {
               </p>
             ) : messages.map(msg => {
               const isMe = msg.author_name === profile?.name
+              const isDeleting = deletingMsgId === msg.id
               return (
-                <div key={msg.id} style={{
-                  display: 'flex',
-                  justifyContent: isMe ? 'flex-end' : 'flex-start',
-                }}>
-                  <div style={{
-                    maxWidth: '78%',
-                    background: isMe ? '#dcf8c6' : '#ffffff',
-                    borderRadius: isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-                    padding: '8px 10px',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
-                  }}>
+                <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                  <div
+                    onClick={() => isMe && setDeletingMsgId(isDeleting ? null : msg.id)}
+                    style={{
+                      maxWidth: '78%',
+                      background: isMe ? '#dcf8c6' : '#ffffff',
+                      borderRadius: isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                      padding: '8px 10px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
+                      cursor: isMe ? 'pointer' : 'default',
+                    }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: isMe ? '#1a8a4a' : '#25d366', marginBottom: 2 }}>
                       {msg.author_name}
                     </div>
-                    <div style={{ fontSize: 14, color: '#1a1a1a', lineHeight: 1.4 }}>{msg.text}</div>
+                    <div style={{ fontSize: 14, color: '#1a1a1a', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{msg.text}</div>
                     <div style={{ fontSize: 11, color: '#888', marginTop: 3, textAlign: 'right' }}>
                       {fmtDate(msg.created_at)}
                     </div>
                   </div>
+                  {isDeleting && (
+                    <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                      <button onClick={() => setDeletingMsgId(null)} style={{
+                        padding: '4px 12px', borderRadius: 8, border: 'none',
+                        background: '#e5e5ea', color: '#1a1a1a', fontSize: 12, cursor: 'pointer',
+                      }}>Cancel</button>
+                      <button onClick={() => handleDeleteMessage(msg.id)} style={{
+                        padding: '4px 12px', borderRadius: 8, border: 'none',
+                        background: '#ff3b30', color: '#fff', fontSize: 12, cursor: 'pointer',
+                      }}>Delete</button>
+                    </div>
+                  )}
                 </div>
               )
             })}
