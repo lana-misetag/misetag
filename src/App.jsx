@@ -579,7 +579,7 @@ export default function App() {
   )
 
   const canEdit  = CAN_EDIT.includes(profile?.role)
-  const canSeeLog = ['super_admin', 'head_chef', 'head_manager'].includes(profile?.role)
+  const canSeeLog = ['super_admin', 'head_chef', 'head_manager', 'cook'].includes(profile?.role)
 
   // Shared input style
   const inp = (extra = {}) => ({
